@@ -7,19 +7,36 @@ const api = new Gitlab({
   token: 'XXX'
 });
 
-api.Projects.all({membership: true}).then(projects => console.log({projects}))
+api.Projects.all({membership: true, maxPages: 25}).then(projects => projects.forEach(project => console.log(JSON.stringify({project}))))
 
-api.Events.all({ maxPages: 2 }).then((events) => {
+let counter = 1;
+api.Events.all({ projectId: 1, maxPages: 150 }).then((events) => {
 	events.forEach((event) => {
-		console.log({event})
-		if (event.target_type === "WorkItem" && event.action_name === "opened") {
-			console.log('ISSUE!')
-			api.Issues.show(event.target_iid, {projectId: event.project_id}).then(issue => console.log({issue}))
-		
+		console.log(JSON.stringify({event}))
+		if (event.target_type === "Issue" && event.action_name === "opened") {
+			if (counter < 5) {
+				counter++
+				api.Issues.show(event.target_iid, {projectId: event.project_id}).then(issue => {
+					console.log(JSON.stringify({issue}))
+					counter--
+				})
+			}
 		}
 	})
+	counter--;
 });
 
+function wait () {
+   console.log(JSON.stringify({counter}));
+   if (counter !== 0) {
+        setTimeout(wait, 1000);
+   } else {
+   }
+};
+wait();
+
+/**
+return;
 console.log({storage})
 // Remember to rename these classes and interfaces!
 
@@ -153,3 +170,4 @@ class GitNotesSettingTab extends PluginSettingTab {
 				}));
 	}
 }
+*/
