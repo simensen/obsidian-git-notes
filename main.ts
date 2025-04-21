@@ -1,5 +1,26 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import storage from 'storage'
+import { Gitlab } from '@gitbeaker/rest';
 
+const api = new Gitlab({
+  host: 'https://gitlab.com',
+  token: 'XXX'
+});
+
+api.Projects.all({membership: true}).then(projects => console.log({projects}))
+
+api.Events.all({ maxPages: 2 }).then((events) => {
+	events.forEach((event) => {
+		console.log({event})
+		if (event.target_type === "WorkItem" && event.action_name === "opened") {
+			console.log('ISSUE!')
+			api.Issues.show(event.target_iid, {projectId: event.project_id}).then(issue => console.log({issue}))
+		
+		}
+	})
+});
+
+console.log({storage})
 // Remember to rename these classes and interfaces!
 
 interface MyPluginSettings {
@@ -17,7 +38,7 @@ export default class MyPlugin extends Plugin {
 		await this.loadSettings();
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('dice', 'Git Notes Plugin', (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
 			new Notice('This is a notice!');
 		});
@@ -31,24 +52,24 @@ export default class MyPlugin extends Plugin {
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
+			name: 'Open Git Notes modal (simple)',
 			callback: () => {
-				new SampleModal(this.app).open();
+				new GitNotesModal(this.app).open();
 			}
 		});
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: 'sample-editor-command',
-			name: 'Sample editor command',
+			name: 'Git Notes editor command',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
+				editor.replaceSelection('Git Notes Editor Command');
 			}
 		});
 		// This adds a complex command that can check whether the current state of the app allows execution of the command
 		this.addCommand({
 			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
+			name: 'Open Git Notes modal (complex)',
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
 				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -56,7 +77,7 @@ export default class MyPlugin extends Plugin {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
 					if (!checking) {
-						new SampleModal(this.app).open();
+						new GitNotesModal(this.app).open();
 					}
 
 					// This command will only show up in Command Palette when the check function returns true
@@ -66,7 +87,7 @@ export default class MyPlugin extends Plugin {
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new GitNotesSettingTab(this.app, this));
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -91,7 +112,7 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
+class GitNotesModal extends Modal {
 	constructor(app: App) {
 		super(app);
 	}
@@ -107,7 +128,7 @@ class SampleModal extends Modal {
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
+class GitNotesSettingTab extends PluginSettingTab {
 	plugin: MyPlugin;
 
 	constructor(app: App, plugin: MyPlugin) {

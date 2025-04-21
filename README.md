@@ -1,4 +1,4 @@
-# Obsidian Sample Plugin
+# Obsidian Git Notes Plugin
 
 This is a sample plugin for Obsidian (https://obsidian.md).
 
@@ -7,7 +7,7 @@ The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definiti
 
 This sample plugin demonstrates some of the basic functionality the plugin API can do.
 - Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
+- Adds a command "Open Git Notes Modal" which opens a Modal.
 - Adds a plugin setting tab to the settings page.
 - Registers a global click event and output 'click' to the console.
 - Registers a global interval which logs 'setInterval' to the console.
