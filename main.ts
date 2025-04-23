@@ -7,23 +7,31 @@ const api = new Gitlab({
   token: 'XXX'
 });
 
+const projectId = 1;
+
 api.Projects.all({membership: true, maxPages: 25}).then(projects => projects.forEach(project => console.log(JSON.stringify({project}))))
 
 let counter = 1;
-api.Events.all({ projectId: 1, maxPages: 150 }).then((events) => {
+api.Events.all({ projectId, maxPages: 250 }).then((events) => {
+	const issues = [];
 	events.forEach((event) => {
 		console.log(JSON.stringify({event}))
-		if (event.target_type === "Issue" && event.action_name === "opened") {
+		//if (event.target_type === "Issue" && event.action_name === "opened") {
+		if (event.target_type === "Issue" || event.target_type === "MergeRequest") {
+			issues.push(event)
 			if (counter < 5) {
-				counter++
-				api.Issues.show(event.target_iid, {projectId: event.project_id}).then(issue => {
-					console.log(JSON.stringify({issue}))
-					counter--
-				})
+				//counter++
+				//api.Issues.show(event.target_iid, {projectId: event.project_id}).then(issue => {
+					//console.log(JSON.stringify({issue}))
+					//counter--
+				//})
 			}
 		}
 	})
 	counter--;
+
+	console.log(JSON.stringify({issues}))
+	console.log(JSON.stringify({issues: issues.length}))
 });
 
 function wait () {
