@@ -1,47 +1,75 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import storage from 'storage'
-import { Gitlab } from '@gitbeaker/rest';
+// import { Gitlab } from '@gitbeaker/rest';
+import * as fs from 'fs';
 
-const api = new Gitlab({
-  host: 'https://gitlab.com',
-  token: 'XXX'
-});
+import { EventEmitter } from 'events';
 
-const projectId = 1;
 
-api.Projects.all({membership: true, maxPages: 25}).then(projects => projects.forEach(project => console.log(JSON.stringify({project}))))
+import { GitLabData } from 'gitlab'
+import { DefaultCredentialsStore, MainData, Paths } from 'local'
 
-let counter = 1;
-api.Events.all({ projectId, maxPages: 250 }).then((events) => {
-	const issues = [];
-	events.forEach((event) => {
-		console.log(JSON.stringify({event}))
-		//if (event.target_type === "Issue" && event.action_name === "opened") {
-		if (event.target_type === "Issue" || event.target_type === "MergeRequest") {
-			issues.push(event)
-			if (counter < 5) {
-				//counter++
-				//api.Issues.show(event.target_iid, {projectId: event.project_id}).then(issue => {
-					//console.log(JSON.stringify({issue}))
-					//counter--
-				//})
-			}
-		}
-	})
-	counter--;
 
-	console.log(JSON.stringify({issues}))
-	console.log(JSON.stringify({issues: issues.length}))
-});
 
-function wait () {
-   console.log(JSON.stringify({counter}));
-   if (counter !== 0) {
-        setTimeout(wait, 1000);
-   } else {
-   }
-};
-wait();
+const eventEmitter = new EventEmitter
+const data = new MainData
+const paths = new Paths('./')
+
+const authPath = paths.generatePath('.auth.json')
+
+const auth = fs.readFileSync(authPath, 'utf-8');
+
+const credentialStore = new DefaultCredentialsStore(JSON.parse(auth))
+
+data.register(new GitLabData(eventEmitter, paths, credentialStore))
+
+eventEmitter.on('event', event => {
+	console.log({received: event})
+})
+
+
+const refreshInMs = 5 * 1000
+
+function doIt() {
+	data.rebuild({type: 'gitlab'})
+}
+
+setInterval(doIt, refreshInMs)
+
+doIt()
+
+// api.Projects.all({membership: true, maxPages: 25}).then(projects => projects.forEach(project => console.log(JSON.stringify({project}))))
+
+// let counter = 1;
+// api.Events.all({ projectId, maxPages: 250 }).then((events) => {
+// 	const issues = [];
+// 	events.forEach((event) => {
+// 		console.log(JSON.stringify({event}))
+// 		//if (event.target_type === "Issue" && event.action_name === "opened") {
+// 		if (event.target_type === "Issue" || event.target_type === "MergeRequest") {
+// 			issues.push(event)
+// 			if (counter < 5) {
+// 				//counter++
+// 				//api.Issues.show(event.target_iid, {projectId: event.project_id}).then(issue => {
+// 					//console.log(JSON.stringify({issue}))
+// 					//counter--
+// 				//})
+// 			}
+// 		}
+// 	})
+// 	counter--;
+
+// 	console.log(JSON.stringify({issues}))
+// 	console.log(JSON.stringify({issues: issues.length}))
+// });
+
+// function wait () {
+//    console.log(JSON.stringify({counter}));
+//    if (counter !== 0) {
+//         setTimeout(wait, 1000);
+//    } else {
+//    }
+// };
+// wait();
 
 /**
 return;
