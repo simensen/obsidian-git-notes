@@ -58,7 +58,23 @@ export class GitLabData implements DataSupports
         let events = [];
 
         try {
-            events = await api.Events.all({ maxPages, sort: 'asc' })
+            // This gets issues for a project with the most recently updated issues first
+            const issues = await api.Issues.all({projectId: 66873174, orderBy: 'updated_at', updatedAfter: '2025-04-28T02:58:00Z'})
+
+            issues.forEach(issue => console.log(JSON.stringify(issue)))
+
+            // This gets notes for specific issues, including when assignment changes
+            const issueStateEvents = await api.IssueNotes.all(66873174, 1)
+            issueStateEvents.forEach(event => console.log(JSON.stringify({event})))
+        } catch (error) {
+            console.log(error)
+        }
+
+
+        try {
+            // We could use some of these events to pick up when we should start paying attention to
+            // new issues / merge requests?
+            events = await api.Events.all({ maxPages, sort: 'desc' })
         } catch (error) {
             console.log(error)
 
@@ -72,13 +88,18 @@ export class GitLabData implements DataSupports
             }
 
             const actualPath = (() => {
+                // note.noteable_type = MergeRequest
+                // note.noteable_id =
+                // noteable_iid
                 // 2025-04-20T23:06:06.758Z
                 const dateSegmentPieces = event.created_at.split('T')[0].split('-')
                 const dateSegmentSlashes = dateSegmentPieces.join('/')
                 const dateSegment = event.created_at.replace(/[:\-.Z]/g, "")
                 switch(true) {
                     case event.target_type !== null:
-                        return `${event.project_id}/${event.target_type}/${event.target_iid}/${dateSegment}-${event.id}.json`
+                        const target_type = event.note?.noteable_type ?? event.target_type
+                        const target_iid = event.note?.noteable_iid ?? event.target_iid
+                        return `${event.project_id}/${target_type}/${target_iid}/${dateSegment}-${event.id}.json`
                     case event.push_data !== null:
                         return `${event.project_id}/pushes/${dateSegmentSlashes}/${dateSegment}-${event.id}.json`
                     default:
@@ -92,7 +113,7 @@ export class GitLabData implements DataSupports
 
             if (fs.existsSync(eventPath)) {
                 console.log(' ---- ' + eventPath + ' (already there)')
-                done = true
+                // done = true
                 return
             }
 
@@ -105,7 +126,7 @@ export class GitLabData implements DataSupports
                 console.log({e})
             }
 
-            newEvents.push(event)
+            newEvents.unshift(event)
         })
 
         return newEvents
