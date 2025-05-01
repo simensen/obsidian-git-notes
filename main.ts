@@ -1,14 +1,8 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-// import { Gitlab } from '@gitbeaker/rest';
 import * as fs from 'fs';
-
 import { EventEmitter } from 'events';
-
-
 import { GitLabData } from 'gitlab'
 import { DefaultCredentialsStore, MainData, Paths } from 'local'
-
-
 
 const eventEmitter = new EventEmitter
 const data = new MainData
@@ -16,45 +10,55 @@ const paths = new Paths('./')
 
 const authPath = paths.generatePath('.auth.json')
 
-const auth = fs.readFileSync(authPath, 'utf-8');
+const auth = JSON.parse(fs.readFileSync(authPath, 'utf-8'));
 
-const credentialStore = new DefaultCredentialsStore(JSON.parse(auth))
+const credentialStore = new DefaultCredentialsStore(auth)
 
 data.register(new GitLabData(eventEmitter, paths, credentialStore))
 
-const dataTarget = {type: 'gitlab'}
-
-eventEmitter.on('event', event => {
-	//console.log({'event handled later': event.key})
-})
-
 eventEmitter.on('entity.refresh', async event => {
-	//console.log(event)
 	if (event.target_type === 'Issue') {
-		//console.log({data})
-		const issue = await data.getIssue(dataTarget, event.project_id, event.target_iid)
-
-		console.log({issue})
+		await data.rebuildIssue(event.dataTarget, event.project_id, event.target_iid)
 	}
 
 	if (event.target_type === 'MergeRequest') {
-		//console.log({data})
-		const mergeRequest = await data.getMergeRequest(dataTarget, event.project_id, event.target_iid)
-
-		console.log({mergeRequest})
+		await data.rebuildMergeRequest(event.dataTarget, event.project_id, event.target_iid)
 	}
 })
 
-
-const refreshInMs = 5 * 1000
-
-function doIt() {
-	data.rebuild(dataTarget)
+const state = {
+	lastUpdated: null
 }
 
+const refreshInMs = 15 * 60 * 1000
+const skipInMs = refreshInMs
+
+function rebuild(id: int, now) {
+	state.lastUpdated = now
+	console.log({rebuild: id, now})
+	Object.entries(auth)
+		.forEach(([type, hostnames]) => Object.keys(hostnames)
+			.forEach(hostname => data.rebuild({type, hostname})))
+}
+
+function doIt() {
+	const now = new Date()
+
+	if (state.lastUpdated && (now - state.lastUpdated) < skipInMs) {
+		console.log('skipping rebuild; built too recently')
+		return
+	}
+
+	rebuild(1, now)
+}
+
+// Kicks off the regular updates.
 setInterval(doIt, refreshInMs)
 
 doIt()
+
+// Kicks off a once-an-hour extra update just to keep things exciting
+setInterval(() => rebuild(2, new Date()), 60 * 60 * 1000)
 
 // api.Projects.all({membership: true, maxPages: 25}).then(projects => projects.forEach(project => console.log(JSON.stringify({project}))))
 
@@ -90,10 +94,9 @@ doIt()
 // };
 // wait();
 
-/**
-return;
-console.log({storage})
 // Remember to rename these classes and interfaces!
+// }
+//
 
 interface MyPluginSettings {
 	mySetting: string;
@@ -225,4 +228,3 @@ class GitNotesSettingTab extends PluginSettingTab {
 				}));
 	}
 }
-*/
