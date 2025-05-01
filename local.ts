@@ -14,6 +14,46 @@ export class Paths {
 
         return `./data/${dataTarget.type}/${hostname}/${path}`
     }
+
+    generateDataTargetStorageEntityPath(dataTarget: DataTarget, projectId: string, targetType: string, targetInternalId: int, path: string = ''): string {
+		return this.generateDataTargetStoragePath(
+			dataTarget, 
+			`${projectId}/${targetType}/${targetInternalId}/${path}`
+		)
+	}
+
+    generateDataTargetStorageEntity(dataTarget: DataTarget, projectId: string, targetType: string, targetInternalId: int): string {
+		return this.generateDataTargetStorageEntityPath(
+			dataTarget, 
+			projectId,
+			targetType,
+			targetInternalId,
+			`${targetType}-${targetInternalId}.json`
+		)
+    }
+
+    generateDataTargetStorageEntityEventPath(dataTarget: DataTarget, projectId: string, targetType: string, targetInternalId: int, path: string = ''): string {
+		return this.generateDataTargetStorageEntityPath(
+			dataTarget, 
+			projectId,
+			targetType,
+			targetInternalId,
+			`_events/${path}`
+		)
+    }
+
+    generateDataTargetStorageEntityEvent(dataTarget: DataTarget, projectId: string, targetType: string, targetInternalId: int, event): string {
+		const dateSegment = event.created_at.replace(/[:\-.Z]/g, "")
+		const path = `${dateSegment}-${event.id}.json`
+
+		return this.generateDataTargetStorageEntityEventPath(
+			dataTarget, 
+			projectId,
+			targetType,
+			targetInternalId,
+			path,
+		)
+    }
 }
 
 export interface Credentials {
@@ -124,6 +164,27 @@ export class MainData implements Data {
     register(data: DataSupports): void {
         this.datas.push(data)
     }
+
+    rebuildMergeRequest(dataTarget: DataTarget, projectId, mergeRequestInternalId): void {
+        const data = this.datas.find(data => data.supports(dataTarget))
+
+        if (!data) {
+            throw new Error("Could not find data supporting the target")
+        }
+
+        return data.rebuildMergeRequest(dataTarget, projectId, mergeRequestInternalId)
+	}
+
+    getMergeRequest(dataTarget: DataTarget, projectId, mergeRequestInternalId): void {
+        const data = this.datas.find(data => data.supports(dataTarget))
+
+        if (!data) {
+            throw new Error("Could not find data supporting the target")
+        }
+
+        return data.getMergeRequest(dataTarget, projectId, mergeRequestInternalId)
+    }
+
 
     rebuildIssue(dataTarget: DataTarget, projectId, issueInternalId): void {
         const data = this.datas.find(data => data.supports(dataTarget))

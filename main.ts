@@ -36,6 +36,13 @@ eventEmitter.on('entity.refresh', async event => {
 
 		console.log({issue})
 	}
+
+	if (event.target_type === 'MergeRequest') {
+		//console.log({data})
+		const mergeRequest = await data.getMergeRequest(dataTarget, event.project_id, event.target_iid)
+
+		console.log({mergeRequest})
+	}
 })
 
 

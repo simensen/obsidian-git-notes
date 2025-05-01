@@ -44,25 +44,52 @@ export class GitLabData implements DataSupports
         return {host, token}
     }
 
+	async rebuildMergeRequest(dataTarget: DataTarget, projectId, mergeRequestInternalId): Promise<EventSchema>
+	{
+        const paths = new Paths()
+		const jsonPath = paths.generateDataTargetStorageEntity(dataTarget, projectId, "MergeRequest", mergeRequestInternalId)
+		const jsonDir = dirname(jsonPath)
+
+		const api = new Gitlab(this.getApiOptions(dataTarget))
+
+		const mergeRequest = await api.MergeRequests.show(projectId, mergeRequestInternalId)
+
+		try {
+			fs.mkdirSync(jsonDir, { recursive: true })
+			fs.writeFileSync(jsonPath, JSON.stringify(mergeRequest))
+		} catch (e) {
+			console.log({e})
+		}
+
+		return mergeRequest
+	}
+
+
+	async getMergeRequest(dataTarget: DataTarget, projectId, mergeRequestInternalId): Promise<EventSchema>
+	{
+        const paths = new Paths()
+		const jsonPath = paths.generateDataTargetStorageEntity(dataTarget, projectId, "MergeRequest", mergeRequestInternalId)
+		const jsonDir = dirname(jsonPath)
+
+		if (fs.existsSync(jsonPath)) {
+			return JSON.parse(fs.readFileSync(jsonPath))
+		}
+
+		return this.rebuildMergeRequest(dataTarget, projectId, mergeRequestInternalId)
+	}
+
+
 	async rebuildIssue(dataTarget: DataTarget, projectId, issueInternalId): Promise<EventSchema>
 	{
         const paths = new Paths()
-		const target_type = 'Issue'
-		const target_iid = issueInternalId
-    	
-		const actualPath = `${projectId}/${target_type}/${target_iid}/Issue-${target_iid}.json`
-
-		const jsonPath = paths.generateDataTargetStoragePath(dataTarget, actualPath)
-
+		const jsonPath = paths.generateDataTargetStorageEntity(dataTarget, projectId, "Issue", issueInternalId)
 		const jsonDir = dirname(jsonPath)
-
 
 		const api = new Gitlab(this.getApiOptions(dataTarget))
 
 		const issue = await api.Issues.show(issueInternalId, {projectId})
 
 		try {
-			console.log(' ---- ' + jsonPath + ' (writing)')
 			fs.mkdirSync(jsonDir, { recursive: true })
 			fs.writeFileSync(jsonPath, JSON.stringify(issue))
 		} catch (e) {
@@ -76,13 +103,7 @@ export class GitLabData implements DataSupports
 	async getIssue(dataTarget: DataTarget, projectId, issueInternalId): Promise<EventSchema>
 	{
         const paths = new Paths()
-		const target_type = 'Issue'
-		const target_iid = issueInternalId
-    	
-		const actualPath = `${projectId}/${target_type}/${target_iid}/Issue-${target_iid}.json`
-
-		const jsonPath = paths.generateDataTargetStoragePath(dataTarget, actualPath)
-
+		const jsonPath = paths.generateDataTargetStorageEntity(dataTarget, projectId, "Issue", issueInternalId)
 		const jsonDir = dirname(jsonPath)
 
 		if (fs.existsSync(jsonPath)) {
@@ -103,7 +124,7 @@ export class GitLabData implements DataSupports
         //     ? 10
         //     : 200
 
-        const maxPages = 100
+        const maxPages = 10
 
         const newEvents: EventSchema[] = []
         const updatedEntities = {}
@@ -138,7 +159,6 @@ export class GitLabData implements DataSupports
 
         events.forEach(event => {
             if (done) {
-                console.log(' ---- ' + event.id)
                 return
             }
 
@@ -146,39 +166,17 @@ export class GitLabData implements DataSupports
 			const project_id = event.project_id
             const target_type = event.note?.noteable_type ?? event.target_type ?? event.push_data?.ref_type
             const target_iid = event.note?.noteable_iid ?? event.target_iid ?? event.push_data?.ref
-            
-            const actualPath = (() => {
-                // note.noteable_type = MergeRequest
-                // note.noteable_id =
-                // noteable_iid
-                // 2025-04-20T23:06:06.758Z
-                const dateSegmentPieces = event.created_at.split('T')[0].split('-')
-                const dateSegmentSlashes = dateSegmentPieces.join('/')
-                const dateSegment = event.created_at.replace(/[:\-.Z]/g, "")
-                switch(true) {
-                    case event.target_type !== null:
-                        //const target_type = event.note?.noteable_type ?? event.target_type
-                        //const target_iid = event.note?.noteable_iid ?? event.target_iid
-                        return `${event.project_id}/${target_type}/${target_iid}/${dateSegment}-${event.id}.json`
-                    case event.push_data !== null:
-                        return `${event.project_id}/${target_type}/${target_iid}/${dateSegment}-${event.id}.json`
-                    default:
-                        throw new Error("Could not determine event type: " + JSON.stringify(event))
-                }
-            })()
-
-            const eventPath = paths.generateDataTargetStoragePath(dataTarget, actualPath)
+          
+			const eventPath = paths.generateDataTargetStorageEntityEvent(dataTarget, project_id, target_type, target_iid, event)
 
             const eventDir = dirname(eventPath)
 
             if (fs.existsSync(eventPath)) {
-                console.log(' ---- ' + eventPath + ' (already there)')
-                //done = true
-                //return
+                done = true
+                return
             }
 
             try {
-                console.log(' ---- ' + eventPath + ' (adding)')
                 fs.mkdirSync(eventDir, { recursive: true })
                 fs.writeFileSync(eventPath, JSON.stringify(event))
 
