@@ -59,7 +59,7 @@ doIt()
 
 // Kicks off a once-an-hour extra update just to keep things exciting
 setInterval(() => rebuild(2, new Date()), 60 * 60 * 1000)
-}
+
 interface MyPluginSettings {
 	mySetting: string;
 }
