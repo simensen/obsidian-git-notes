@@ -125,6 +125,26 @@ export class MainData implements Data {
         this.datas.push(data)
     }
 
+    rebuildIssue(dataTarget: DataTarget, projectId, issueInternalId): void {
+        const data = this.datas.find(data => data.supports(dataTarget))
+
+        if (!data) {
+            throw new Error("Could not find data supporting the target")
+        }
+
+        return data.rebuildIssue(dataTarget, projectId, issueInternalId)
+	}
+
+    getIssue(dataTarget: DataTarget, projectId, issueInternalId): void {
+        const data = this.datas.find(data => data.supports(dataTarget))
+
+        if (!data) {
+            throw new Error("Could not find data supporting the target")
+        }
+
+        return data.getIssue(dataTarget, projectId, issueInternalId)
+    }
+
     rebuild(dataTarget: DataTarget): void {
         const data = this.datas.find(data => data.supports(dataTarget))
 

@@ -22,15 +22,27 @@ const credentialStore = new DefaultCredentialsStore(JSON.parse(auth))
 
 data.register(new GitLabData(eventEmitter, paths, credentialStore))
 
+const dataTarget = {type: 'gitlab'}
+
 eventEmitter.on('event', event => {
-	console.log({received: event})
+	//console.log({'event handled later': event.key})
+})
+
+eventEmitter.on('entity.refresh', async event => {
+	//console.log(event)
+	if (event.target_type === 'Issue') {
+		//console.log({data})
+		const issue = await data.getIssue(dataTarget, event.project_id, event.target_iid)
+
+		console.log({issue})
+	}
 })
 
 
 const refreshInMs = 5 * 1000
 
 function doIt() {
-	data.rebuild({type: 'gitlab'})
+	data.rebuild(dataTarget)
 }
 
 setInterval(doIt, refreshInMs)
